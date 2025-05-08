@@ -1,0 +1,37 @@
+name: Pull Request
+
+on:
+  pull_request:
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      scope: ${{ steps.changes.outputs.changes }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            all:
+              - 'go.mod'
+              - 'go.sum'
+            coremodule:
+              - 'coremodule/**'
+            stringmodule:
+              - 'stringmodule/**'
+            mathmodule:
+              - 'mathmodule/**'
+            calendarmodule:
+              - 'calendarmodule/**'
+
+  all-test:
+    needs: changes
+    if: ${{ needs.changes.outputs.scope.contains('all') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+      - run: go test -v ./...
