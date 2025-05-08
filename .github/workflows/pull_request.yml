@@ -9,7 +9,7 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      scope: ${{ steps.changes.outputs.changes }}
+      scopes: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: dorny/paths-filter@v3
         id: filter
@@ -18,20 +18,35 @@ jobs:
             all:
               - 'go.mod'
               - 'go.sum'
-            coremodule:
               - 'coremodule/**'
             stringmodule:
               - 'stringmodule/**'
             mathmodule:
               - 'mathmodule/**'
-            calendarmodule:
-              - 'calendarmodule/**'
 
   all-test:
     needs: changes
-    if: ${{ needs.changes.outputs.scope.contains('all') }}
+    if: ${{ contains(needs.changes.outputs.scopes, 'all') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
       - run: go test -v ./...
+
+  module-tests:
+    needs: changes
+    if: |
+      !contains(needs.changes.outputs.scopes, 'all') &&
+      (
+        contains(needs.changes.outputs.scopes, 'stringmodule') ||
+        contains(needs.changes.outputs.scopes, 'mathmodule')
+      )
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: [stringmodule, mathmodule]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+      - name: Run tests for ${{ matrix.module }}
+        run: cd ${{ matrix.module }} && go test -v ./...
